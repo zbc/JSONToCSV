@@ -1,0 +1,4 @@
+// prettier-ignore
+{ 
+    "presets": ["es2015", "stage-2"] 
+}
