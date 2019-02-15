@@ -23,6 +23,10 @@ if (outputDir[outputDir.length - 1] !== '/') {
 }
 outputName += '.csv';
 
+let previous;
+let current;
+let hasDuplicate = false;
+
 recursive(dirName, (dirError, files) => {
   if (dirError) {
     console.log(`Directory Error: ${dirError}`);
@@ -34,28 +38,52 @@ recursive(dirName, (dirError, files) => {
           console.log(`Read File Error: ${readFileError}`);
         } else {
           const consoleData = JSON.parse(data);
-          if (fs.existsSync(`${outputDir}${outputName}`)) {
-            const json2csvParser = new Parser({ fields, header: false });
-            const csv = json2csvParser.parse(consoleData) + newLine;
-            fs.appendFile(`${outputDir}${outputName}`, csv, 'utf8', (appendFileError) => {
-              if (appendFileError) {
-                console.log(`Append File Error: ${appendFileError}`);
-              } else {
-                count += 1;
-                printProgress(count / total);
+          current = Object.assign({}, consoleData);
+          if (previous) {
+            // console.log(`previous type: ${previous.devicetype}`);
+            // console.log(`previous time: ${previous.transactiondatetime.substring(0, 16)}`);
+            // console.log(`current type: ${current.devicetype}`);
+            // console.log(`current time: ${current.transactiondatetime.substring(0, 16)}`);
+            if (current.devicetype === previous.devicetype) {
+              if (
+                current.transactiondatetime.substring(0, 16) ===
+                previous.transactiondatetime.substring(0, 16)
+              ) {
+                hasDuplicate = true;
               }
-            });
+            } else {
+              hasDuplicate = false;
+            }
+          }
+
+          if (!hasDuplicate) {
+            if (fs.existsSync(`${outputDir}${outputName}`)) {
+              const json2csvParser = new Parser({ fields, header: false });
+              const csv = json2csvParser.parse(consoleData) + newLine;
+              fs.appendFile(`${outputDir}${outputName}`, csv, 'utf8', (appendFileError) => {
+                if (appendFileError) {
+                  console.log(`Append File Error: ${appendFileError}`);
+                } else {
+                  count += 1;
+                  printProgress(count / total);
+                }
+              });
+            } else {
+              const json2csvParser = new Parser({ fields });
+              const csv = json2csvParser.parse(consoleData) + newLine;
+              fs.writeFile(`${outputDir}${outputName}`, csv, 'utf8', (writeFileError) => {
+                if (writeFileError) {
+                  console.log(`Append File Error: ${writeFileError}`);
+                } else {
+                  count += 1;
+                  printProgress(count / total);
+                }
+              });
+            }
+            previous = Object.assign({}, consoleData);
           } else {
-            const json2csvParser = new Parser({ fields });
-            const csv = json2csvParser.parse(consoleData) + newLine;
-            fs.writeFile(`${outputDir}${outputName}`, csv, 'utf8', (writeFileError) => {
-              if (writeFileError) {
-                console.log(`Append File Error: ${writeFileError}`);
-              } else {
-                count += 1;
-                printProgress(count / total);
-              }
-            });
+            count += 1;
+            printProgress(count / total);
           }
         }
       });
